@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shorten — Free URL Shortener</title>
+<meta name="description" content="A free, fast, and simple URL shortener.">
+<meta name="color-scheme" content="light dark">
+<script>
+  (function () {
+    var t = localStorage.getItem('theme');
+    if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t);
+  })();
+</script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #111113;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --error: #dc2626;
+    --success: #059669;
+    --input-bg: #ffffff;
+    --btn-text: #ffffff;
+  }
+  [data-theme="dark"] {
+    --bg: #0b0b0d;
+    --fg: #f3f4f6;
+    --muted: #9ca3af;
+    --border: #232327;
+    --accent: #3b82f6;
+    --accent-hover: #60a5fa;
+    --error: #f87171;
+    --success: #34d399;
+    --input-bg: #151518;
+    --btn-text: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    -webkit-font-smoothing: antialiased;
+    transition: background .15s ease, color .15s ease;
+  }
+  .wrap { width: 100%; max-width: 460px; }
+  .top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+  }
+  .brand {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .brand span { color: var(--accent); }
+  .toggle {
+    background: transparent;
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background .15s ease, border-color .15s ease;
+  }
+  .toggle:hover { background: var(--border); }
+  .field { margin-bottom: 16px; }
+  .label {
+    display: block;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 15px;
+    background: var(--input-bg);
+    color: var(--fg);
+    outline: none;
+    font-family: inherit;
+    transition: border-color .15s ease;
+  }
+  .input:focus { border-color: var(--accent); }
+  .input::placeholder { color: var(--muted); opacity: 0.7; }
+  .slug-wrap {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--input-bg);
+    overflow: hidden;
+    transition: border-color .15s ease;
+  }
+  .slug-wrap:focus-within { border-color: var(--accent); }
+  .slug-prefix {
+    padding: 12px 4px 12px 14px;
+    color: var(--muted);
+    font-size: 15px;
+    user-select: none;
+  }
+  .slug-wrap .input {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+  }
+  .btn {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--accent);
+    color: var(--btn-text);
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background .15s ease, transform .05s ease;
+  }
+  .btn:hover:not(:disabled) { background: var(--accent-hover); }
+  .btn:active:not(:disabled) { transform: translateY(1px); }
+  .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+  .msg {
+    font-size: 13px;
+    margin-top: 12px;
+    min-height: 18px;
+    line-height: 1.45;
+  }
+  .msg.error { color: var(--error); }
+  .msg.success { color: var(--success); }
+  .msg.info { color: var(--muted); }
+  .result {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .result.show { display: flex; }
+  .result-url {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 14px;
+    word-break: break-all;
+    flex: 1;
+  }
+  .copy {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--fg);
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: background .15s ease;
+  }
+  .copy:hover { background: var(--border); }
+  .footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 32px;
+    line-height: 1.5;
+  }
+  .footer a { color: var(--muted); text-decoration: underline; }
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="top">
+      <div class="brand">Shorten<span>.</span></div>
+      <button class="toggle" id="themeToggle" type="button" aria-label="Toggle theme">Dark</button>
+    </div>
+
+    <form id="form" novalidate>
+      <div class="field">
+        <label class="label" for="url">Long URL</label>
+        <input
+          class="input"
+          id="url"
+          type="url"
+          inputmode="url"
+          placeholder="https://example.com/very/long/link"
+          autocomplete="off"
+          spellcheck="false"
+        >
+      </div>
+
+      <div class="field">
+        <label class="label" for="slug">Custom slug (optional)</label>
+        <div class="slug-wrap">
+          <span class="slug-prefix">/</span>
+          <input
+            class="input"
+            id="slug"
+            type="text"
+            placeholder="my-link"
+            autocomplete="off"
+            autocapitalize="off"
+            autocorrect="off"
+            spellcheck="false"
+            maxlength="20"
+          >
+        </div>
+      </div>
+
+      <button class="btn" id="submitBtn" type="submit">Shorten URL</button>
+
+      <p class="msg" id="msg" role="status" aria-live="polite"></p>
+
+      <div class="result" id="result">
+        <span class="result-url" id="resultUrl"></span>
+        <button class="copy" id="copyBtn" type="button">Copy</button>
+      </div>
+    </form>
+
+    <p class="footer">
+      Free &amp; open source URL shortener.<br>
+      Powered by Supabase and Cloudflare Pages.
+    </p>
+  </main>
+
+<script>
+(function () {
+  "use strict";
+
+  // ====== CONFIG — replace with your own values ======
+  var SUPABASE_URL = "https://ntwpgvadiakrrucztdcg.supabase.co";
+  var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im50d3BndmFkaWFrcnJ1Y3p0ZGNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzMTQzMDAsImV4cCI6MjEwMDg5MDMwMH0.qfjW1Hyi6LnV6vNqAK4QOljNz-26kzC3aSYAXyIGMUE";
+  var BASE_URL = "https://url-shortener.pages.dev"; // no trailing slash
+  // ==================================================
+
+  var BASE62 = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+  // ---------- Theme toggle ----------
+  var themeToggle = document.getElementById("themeToggle");
+  function syncToggleLabel() {
+    var cur = document.documentElement.getAttribute("data-theme");
+    themeToggle.textContent = cur === "dark" ? "Light" : "Dark";
+  }
+  syncToggleLabel();
+  themeToggle.addEventListener("click", function () {
+    var cur = document.documentElement.getAttribute("data-theme");
+    var next = cur === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("theme", next);
+    syncToggleLabel();
+  });
+
+  // ---------- Helpers ----------
+  function setMsg(text, type) {
+    var el = document.getElementById("msg");
+    el.textContent = text;
+    el.className = "msg" + (type ? " " + type : "");
+  }
+
+  function showResult(url) {
+    document.getElementById("resultUrl").textContent = url;
+    document.getElementById("result").classList.add("show");
+  }
+
+  function hideResult() {
+    document.getElementById("result").classList.remove("show");
+  }
+
+  function generateSlug(len) {
+    len = len || 6;
+    var s = "";
+    var arr = new Uint32Array(len);
+    crypto.getRandomValues(arr);
+    for (var i = 0; i < len; i++) s += BASE62[arr[i] % 62];
+    return s;
+  }
+
+  function isValidUrl(str) {
+    if (!str) return false;
+    var u;
+    try { u = new URL(str); } catch (e) { return false; }
+    return u.protocol === "http:" || u.protocol === "https:";
+  }
+
+  function isValidSlug(s) {
+    return /^[a-zA-Z0-9]{1,20}$/.test(s);
+  }
+
+  function supabaseHeaders() {
+    return {
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json"
+    };
+  }
+
+  function checkSlugExists(slug) {
+    return fetch(
+      SUPABASE_URL + "/rest/v1/urls?slug=eq." + encodeURIComponent(slug) + "&select=slug&limit=1",
+      { headers: supabaseHeaders() }
+    )
+      .then(function (r) { return r.json(); })
+      .then(function (data) { return Array.isArray(data) && data.length > 0; });
+  }
+
+  function insertUrl(slug, originalUrl) {
+    return fetch(SUPABASE_URL + "/rest/v1/urls", {
+      method: "POST",
+      headers: Object.assign({}, supabaseHeaders(), { "Prefer": "return=minimal" }),
+      body: JSON.stringify({ slug: slug, original_url: originalUrl })
+    }).then(function (r) {
+      if (r.ok) return { ok: true };
+      // 409 Conflict -> unique constraint violation -> slug taken
+      if (r.status === 409) return { ok: false, reason: "taken" };
+      return { ok: false, reason: "error", status: r.status };
+    });
+  }
+
+  // ---------- Form ----------
+  var form = document.getElementById("form");
+  var urlInput = document.getElementById("url");
+  var slugInput = document.getElementById("slug");
+  var submitBtn = document.getElementById("submitBtn");
+
+  // Strip invalid chars in slug input live
+  slugInput.addEventListener("input", function (e) {
+    var v = e.target.value.replace(/[^a-zA-Z0-9]/g, "");
+    if (v !== e.target.value) e.target.value = v;
+  });
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    submit();
+
+    function submit() {
+      var originalUrl = urlInput.value.trim();
+      var customSlug = slugInput.value.trim();
+
+      hideResult();
+      setMsg("", "");
+
+      if (!originalUrl) {
+        setMsg("Please enter a URL to shorten.", "error");
+        urlInput.focus();
+        return;
+      }
+      if (!isValidUrl(originalUrl)) {
+        setMsg("Please enter a valid http or https URL.", "error");
+        urlInput.focus();
+        return;
+      }
+      if (customSlug && !isValidSlug(customSlug)) {
+        setMsg("Custom slug may only contain a-z, A-Z, 0-9 (max 20 chars).", "error");
+        slugInput.focus();
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Shortening...";
+
+      runWithSlug(customSlug || generateSlug(), customSlug ? 1 : 5)
+        .then(function (res) {
+          if (res.ok) {
+            var shortUrl = BASE_URL + "/" + res.slug;
+            setMsg("Your short link is ready.", "success");
+            showResult(shortUrl);
+          } else if (res.reason === "taken-custom") {
+            setMsg("That custom slug is already taken. Please choose another.", "error");
+            slugInput.focus();
+          } else if (res.reason === "taken") {
+            setMsg("Generated slug collided multiple times. Please try again.", "error");
+          } else {
+            setMsg("Something went wrong. Please try again in a moment.", "error");
+          }
+        })
+        .catch(function () {
+          setMsg("Network error. Please check your connection and try again.", "error");
+        })
+        .finally(function () {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Shorten URL";
+        });
+    }
+
+    function runWithSlug(slug, attemptsLeft) {
+      return checkSlugExists(slug).then(function (exists) {
+        if (exists) {
+          if (customSlug) return { ok: false, reason: "taken-custom" };
+          if (attemptsLeft <= 1) return { ok: false, reason: "taken" };
+          return runWithSlug(generateSlug(), attemptsLeft - 1);
+        }
+        return insertUrl(slug, originalUrl).then(function (r) {
+          if (r.ok) return { ok: true, slug: slug };
+          // Race: inserted by someone else between check and insert
+          if (r.reason === "taken") {
+            if (customSlug) return { ok: false, reason: "taken-custom" };
+            if (attemptsLeft <= 1) return { ok: false, reason: "taken" };
+            return runWithSlug(generateSlug(), attemptsLeft - 1);
+          }
+          return { ok: false, reason: "error" };
+        });
+      });
+    }
+  });
+
+  // ---------- Copy ----------
+  var copyBtn = document.getElementById("copyBtn");
+  copyBtn.addEventListener("click", function () {
+    var url = document.getElementById("resultUrl").textContent;
+    if (!url) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(
+        function () { onCopied(); },
+        function () { fallbackCopy(url); }
+      );
+    } else {
+      fallbackCopy(url);
+    }
+    function onCopied() {
+      copyBtn.textContent = "Copied";
+      setMsg("Copied to clipboard.", "info");
+      setTimeout(function () { copyBtn.textContent = "Copy"; }, 1500);
+    }
+    function fallbackCopy(text) {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); onCopied(); }
+      catch (e) { setMsg("Could not copy. Please copy manually.", "error"); }
+      document.body.removeChild(ta);
+    }
+  });
+})();
+</script>
+</body>
+</html>
